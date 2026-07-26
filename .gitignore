@@ -157,6 +157,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Modelos locais (pesados)
+models/
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -216,3 +219,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Dados brutos/processados (mantém a estrutura via .gitkeep)
+data/raw/**
+!data/raw/.gitkeep
+data/processed/**
+!data/processed/.gitkeep
