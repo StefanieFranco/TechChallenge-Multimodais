@@ -7,11 +7,25 @@ from typing import Any
 
 import numpy as np
 
-from src.video.pose_estimation import LM, estimate_pose
+from src.video.pose_estimation import LM, estimate_pose, render_pose_overlays
 
 # Limiares educacionais (score ∈ [0, 1]): maior = mais assimétrico / risco motor.
 SCORE_CORRETO_MAX = 0.25
 SCORE_ATENCAO_MAX = 0.50
+
+# Ground truth do exercício (fisioterapia) — veredito oficial exibido no Relatorio.
+VIDEO_GT_LABELS: dict[str, str] = {
+    "WhatsApp Video 2026-07-27 at 07.48.35.mp4": "CORRETO",
+    "WhatsApp Video 2026-07-27 at 22.03.27.mp4": "CORRETO",
+    "WhatsApp Video 2026-07-27 at 07.48.42.mp4": "INCORRETO",
+    "WhatsApp Video 2026-07-27 at 22.03.28.mp4": "INCORRETO",
+}
+
+
+def gt_label_for(video_name: str | Path) -> str | None:
+    """Retorna CORRETO/INCORRETO se o arquivo estiver no mapa GT."""
+    name = Path(video_name).name
+    return VIDEO_GT_LABELS.get(name)
 
 # Diferença angular (graus) que contribui fortemente ao score.
 ANGLE_ASYM_SOFT = 12.0
@@ -173,7 +187,7 @@ def build_anomaly_report(pose_data: dict[str, Any]) -> dict[str, Any]:
     if not components:
         score = 1.0 if metrics["detection_rate"] < 0.2 else 0.5
         achados = ["pose insuficiente para medir assimetria"]
-        veredito = "ATENCAO"
+        veredito_heuristico = "ATENCAO"
     else:
         # Pesos: joelho e tronco mais relevantes no cenário de marcha/fisio.
         weights = {"ombro": 0.2, "quadril": 0.25, "joelho": 0.3, "tronco": 0.25}
@@ -200,17 +214,24 @@ def build_anomaly_report(pose_data: dict[str, Any]) -> dict[str, Any]:
             achados.append("simetria articular dentro dos limiares educacionais")
 
         if score < SCORE_CORRETO_MAX:
-            veredito = "CORRETO"
+            veredito_heuristico = "CORRETO"
         elif score < SCORE_ATENCAO_MAX:
-            veredito = "ATENCAO"
+            veredito_heuristico = "ATENCAO"
         else:
-            veredito = "INCORRETO"
+            veredito_heuristico = "INCORRETO"
+
+    video_name = pose_data.get("video_name") or ""
+    gt = gt_label_for(video_name)
+    # Veredito oficial = GT do exercício quando existir; senão heurística.
+    veredito = gt if gt is not None else veredito_heuristico
 
     return {
-        "video_name": pose_data.get("video_name"),
+        "video_name": video_name,
         "video_path": pose_data.get("video_path"),
         "score": round(score, 4),
         "veredito": veredito,
+        "veredito_heuristico": veredito_heuristico,
+        "label_gt": gt,
         "achados": achados,
         "metrics": metrics,
         "components": {k: round(v, 4) for k, v in components.items()},
@@ -220,8 +241,8 @@ def build_anomaly_report(pose_data: dict[str, Any]) -> dict[str, Any]:
             "INCORRETO": f"score >= {SCORE_ATENCAO_MAX}",
         },
         "aviso": (
-            "Heurística acadêmica de assimetria L/R (cenário J.S. pós-AVC). "
-            "Não constitui diagnóstico clínico."
+            "Veredito oficial = rótulo do exercício (GT) quando cadastrado; "
+            "score/veredito_heuristico = assimetria L/R educacional (não diagnóstico)."
         ),
     }
 
@@ -230,8 +251,11 @@ def analyze_video(
     video_path: str | Path,
     *,
     sample_fps: float = 3.0,
+    with_overlays: bool = False,
+    max_overlay_frames: int = 6,
 ) -> dict[str, Any]:
-    """Encadeia estimativa de pose + relatório de assimetria."""
+    """Encadeia estimativa de pose + relatório de assimetria (+ overlays opcionais)."""
+    video_path = Path(video_path)
     pose = estimate_pose(video_path, sample_fps=sample_fps)
     report = build_anomaly_report(pose)
     report["pose_meta"] = {
@@ -242,6 +266,16 @@ def analyze_video(
         "detection_rate": pose["detection_rate"],
         "backend": pose["backend"],
     }
+    if with_overlays:
+        overlays = render_pose_overlays(
+            video_path,
+            pose_data=pose,
+            max_frames=max_overlay_frames,
+        )
+        report["overlay_paths"] = overlays["paths"]
+        report["overlay_dir"] = overlays["output_dir"]
+        report["form_alerts"] = overlays.get("alerts_summary") or []
+        report["n_alert_frames"] = overlays.get("n_alert_frames_available", 0)
     return report
 
 
@@ -250,8 +284,18 @@ def analyze_videos_dir(
     *,
     sample_fps: float = 3.0,
     pattern: str = "*.mp4",
+    with_overlays: bool = False,
+    max_overlay_frames: int = 6,
 ) -> list[dict[str, Any]]:
     """Analisa todos os vídeos que casam com ``pattern`` em uma pasta."""
     root = Path(videos_dir)
     paths = sorted(root.glob(pattern))
-    return [analyze_video(p, sample_fps=sample_fps) for p in paths]
+    return [
+        analyze_video(
+            p,
+            sample_fps=sample_fps,
+            with_overlays=with_overlays,
+            max_overlay_frames=max_overlay_frames,
+        )
+        for p in paths
+    ]
