@@ -11,8 +11,11 @@ soundfile>=0.12.0
 # Vitals / anomaly detection
 pyod>=1.1.0
 scikit-learn>=1.3.0
+joblib>=1.3.0
 pandas>=2.0.0
 numpy>=1.24.0
+wfdb>=4.1.0
+pyarrow>=14.0.0
 
 # LLM / reports / fine-tuning local
 requests>=2.31.0

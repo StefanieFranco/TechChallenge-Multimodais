@@ -22,9 +22,9 @@ Vitais → Isolation Forest/PyOD ─┘
 
 | Camada | Pacote | Modelos |
 |---|---|---|
-| Vídeo | `src/video` | MediaPipe Pose, YOLOv8 |
-| Áudio | `src/audio` | Whisper + features de fala |
-| Vitais / texto | `src/vitals` | PyOD / Isolation Forest + checagem de prescrição |
+| Vídeo | `src/video` | MediaPipe Pose (assimetria L/R); YOLOv8 opcional |
+| Áudio | `src/audio` | Features UCI Parkinson; Whisper (próximo) |
+| Vitais / texto | `src/vitals` | Isolation Forest v1 (sintético); prescrição planejada |
 | Fusão | `src/fusion` | Score ponderado dos 3 riscos |
 | LLM / alertas | `src/llm`, `src/alerts` | Ollama + adapter médico |
 
@@ -42,11 +42,35 @@ O enunciado sugere Azure Cognitive Services. A solução usa stack gratuita loca
 
 | Modalidade | MVP | Próximo passo | Local |
 |---|---|---|---|
-| Vitais | Séries sintéticas com anomalias injetadas | PhysioNet (MIT-BIH, MIMIC Waveform) | `data/raw/vitals/` |
-| Áudio | Clip curto próprio / amostra pública | Coswara, Parkinson (PhysioNet/UCI) | `data/raw/audio/` |
-| Vídeo | Webcam própria (exercício simulado) | UCF101 / NTU adaptados | `data/raw/video/` |
+| Vitais (ECG) | **MIT-BIH Arrhythmia (`mitdb`) + Normal Sinus Rhythm (`nsrdb`)** unificados para treino; **ECG Fragment High-Risk** como experimento extra de sensibilidade | MIMIC Waveform / SpO₂–PA sintéticos | `data/raw/vitals/` |
+| Áudio | **UCI Parkinson** (features tabulares) | Coswara / WAV + Whisper | `data/raw/parkinsons/` |
+| Vídeo | Clipe próprio + MediaPipe assimetria L/R (pós-AVC) | UCF101 / NTU; YOLOv8 opcional | `data/raw/videos/` |
 
-Justificativa: datasets clínicos abertos de fisioterapia são raros; dados controlados facilitam validação e são documentados como limitação acadêmica.
+### ECG PhysioNet (detalhe)
+
+| Pasta | Fonte | Papel |
+|---|---|---|
+| `data/raw/vitals/mitdb/` | https://physionet.org/content/mitdb/1.0.0/ | Treino (normal + arritmia) |
+| `data/raw/vitals/nsrdb/` | https://physionet.org/content/nsrdb/1.0.0/ | Treino (baseline sinusal) |
+| `data/raw/vitals/ecg-fragment-high-risk/` | https://physionet.org/content/ecg-fragment-high-risk-label/1.0.0/ | Sensibilidade (fora da união de treino) |
+
+**Importação:** baixar os ZIPs no site PhysioNet, copiar para `data/raw/vitals/` e extrair com `prepare_datasets_from_zips` (ver [`notebooks/Relatorio.ipynb`](../notebooks/Relatorio.ipynb) §§4.1–4.2). Não usamos `wfdb.dl_database` neste fluxo.
+
+**Processamento:** limpeza + união mitdb+nsrdb → [`data/processed/vitals/arrhythmia_train.parquet`](../data/processed/vitals/arrhythmia_train.parquet) via [`src/vitals/ecg_preprocess.py`](../src/vitals/ecg_preprocess.py). Figuras EDA em `data/processed/vitals/figures/`.
+
+Justificativa: datasets clínicos abertos de fisioterapia são raros; para vitais usamos ECG público anotado (proxy cardíaco de UTI/reabilitação) e documentamos limitações (ausência nativa de SpO₂/PA no MIT-BIH).
+
+### Vídeo — fisioterapia (assimetria)
+
+Clipes em `data/raw/videos/`. Pose via MediaPipe Pose Landmarker; heurística educacional de assimetria L/R (ombro/quadril/joelho/tronco) em `src/video/` → veredito CORRETO / ATENCAO / INCORRETO (ver `notebooks/Relatorio.ipynb` §4.7).
+
+### Áudio — features vocais Parkinson
+
+Corpus UCI Oxford em `data/raw/parkinsons/` (`parkinsons.data` + telemonitoring UPDRS). Análise e `voice_risk_score` em `src/audio/parkinsons_analysis.py` (ver `notebooks/Relatorio.ipynb` §4.8). Whisper/STT permanece para clips `.wav`.
+
+### E1 — Vitais sintéticos + Isolation Forest
+
+Série sintética em `data/raw/vitals/synthetic/js001_noite.csv`. Detector: `src/vitals/anomaly_detection.py` → `data/processed/vitals/isolation_forest_vitals.joblib` + `_meta.json`. Acompanhar treino/métricas em `notebooks/Relatorio.ipynb` §4.9 (experimento detalhado: `01_vitals_sinteticos.ipynb`).
 
 ## 5. Pipeline
 
