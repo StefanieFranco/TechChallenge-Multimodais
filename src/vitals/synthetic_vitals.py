@@ -90,6 +90,59 @@ def generate_synthetic_vitals(
     return df
 
 
+def generate_stable_vitals(
+    *,
+    duration_hours: float = 4.0,
+    fs_hz: float = 1.0,
+    seed: int = 7,
+    patient_id: str = "MR-001",
+) -> pd.DataFrame:
+    """Série sintética estável (sem anomalias injetadas) — contraste educacional."""
+    rng = np.random.default_rng(seed)
+    n = int(duration_hours * 3600 * fs_hz)
+    t = np.arange(n) / fs_hz
+    ts = pd.to_datetime("2026-07-28 08:00:00") + pd.to_timedelta(t, unit="s")
+
+    hr = 72 + 2.5 * np.sin(2 * np.pi * t / 3600) + rng.normal(0, 1.0, n)
+    spo2 = 97.5 + 0.3 * np.sin(2 * np.pi * t / 1800) + rng.normal(0, 0.25, n)
+    sbp = 120 + 3 * np.sin(2 * np.pi * t / 2400) + rng.normal(0, 1.5, n)
+    dbp = 75 + 1.5 * np.sin(2 * np.pi * t / 2400) + rng.normal(0, 1.0, n)
+
+    return pd.DataFrame(
+        {
+            "timestamp": ts,
+            "patient_id": patient_id,
+            "HR": np.clip(hr, 55, 95).round(2),
+            "SpO2": np.clip(spo2, 95, 100).round(2),
+            "SBP": np.clip(sbp, 100, 140).round(2),
+            "DBP": np.clip(dbp, 60, 90).round(2),
+            "is_anomaly": np.zeros(n, dtype=int),
+        }
+    )
+
+
+def default_stable_csv(root: Path | None = None) -> Path:
+    root = root or _project_root()
+    return root / "data" / "raw" / "vitals" / "synthetic" / "mr001_estavel.csv"
+
+
+def load_or_create_stable(
+    path: str | Path | None = None,
+    *,
+    force: bool = False,
+    **gen_kwargs: Any,
+) -> tuple[pd.DataFrame, Path]:
+    """Carrega ou gera série estável MR-001."""
+    path = Path(path) if path else default_stable_csv()
+    if path.exists() and not force:
+        df = pd.read_csv(path, parse_dates=["timestamp"])
+        return df, path
+    return save_synthetic_vitals(
+        df=generate_stable_vitals(**gen_kwargs),
+        path=path,
+    )
+
+
 def save_synthetic_vitals(
     df: pd.DataFrame | None = None,
     path: str | Path | None = None,

@@ -223,5 +223,8 @@ __marimo__/
 # Dados brutos/processados (mantém a estrutura via .gitkeep)
 data/raw/**
 !data/raw/.gitkeep
+# Exceção: clipes próprios de fisioterapia (necessários para o professor reproduzir §4.7)
+!data/raw/videos/
+!data/raw/videos/**
 data/processed/**
 !data/processed/.gitkeep

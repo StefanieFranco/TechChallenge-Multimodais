@@ -205,7 +205,20 @@ display(pd.DataFrame([
         """## 4.13 E4 — Fusão multimodal dos 3 scores
 
 `src/fusion/risk_fusion.py` combina vídeo (clip incorreto + alertas), áudio (`voice_risk_score` PD)
-e vitais (IF sintético JS-001) em risco global + breakdown."""
+e vitais (IF sintético JS-001) em risco global + breakdown.
+
+### Por que esses pesos?
+
+Pesos **iguais (1/3 cada)** seriam a *baseline* neutra. No MVP ajustamos para **prioridade clínica**
+de monitoramento contínuo:
+
+| Modalidade | Peso | Motivo |
+|---|---|---|
+| Vitais | **0.55** | Maior ameaça fisiológica (SpO₂/FC) |
+| Vídeo (motor) | **0.25** | Segurança/técnica do exercício |
+| Áudio | **0.20** | Proxy UCI (menos específico do J.S.) |
+
+O **breakdown** por modalidade continua visível — os pesos só definem a agregação, não escondem evidências."""
     ),
     code(
         """from pathlib import Path
@@ -221,10 +234,12 @@ if not (ROOT / "src").exists():
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.fusion.risk_fusion import build_js_scenario_scores
+from src.fusion.risk_fusion import CLINICAL_WEIGHTS, WEIGHTS_RATIONALE, build_js_scenario_scores
 
 scenario = build_js_scenario_scores(ROOT)
 fusion = scenario["fusion"]
+print("Pesos clínicos:", CLINICAL_WEIGHTS)
+print("Racional:", WEIGHTS_RATIONALE)
 print(json.dumps({
     "patient_id": scenario["patient_id"],
     "video": {k: scenario["video"][k] for k in ("score", "veredito", "form_alerts", "n_alert_frames")},
@@ -233,18 +248,19 @@ print(json.dumps({
     "fusion": fusion,
 }, ensure_ascii=False, indent=2))
 display(pd.DataFrame([
-    {"modalidade": "video", "score": scenario["video"]["score"]},
-    {"modalidade": "audio", "score": scenario["audio"]["score"]},
-    {"modalidade": "vitals", "score": scenario["vitals"]["score"]},
-    {"modalidade": "FUSÃO", "score": fusion["risk_score"], "level": fusion["level"]},
+    {"modalidade": "video", "score": scenario["video"]["score"], "peso": fusion["weights"]["video"]},
+    {"modalidade": "audio", "score": scenario["audio"]["score"], "peso": fusion["weights"]["audio"]},
+    {"modalidade": "vitals", "score": scenario["vitals"]["score"], "peso": fusion["weights"]["vitals"]},
+    {"modalidade": "FUSÃO", "score": fusion["risk_score"], "peso": 1.0, "level": fusion["level"]},
 ]))
 """
     ),
     md(
         """## 4.14 E5 — Alerta LLM clínico (Ollama + notifier)
 
-Prompt SBAR em linguagem médico-clínica (`src/llm/ollama_report.py`). Se Ollama estiver off,
-usa **fallback template** clínico. Notificação: `data/processed/alerts/alerta_JS001.md`."""
+Prompt SBAR em linguagem médico-clínica (`src/llm/ollama_report.py`), com perfil do paciente J.S.
+pós-AVC e seção educacional **Sobre o AVC** (o que é + sequelas + ligação com os achados).
+Se Ollama estiver off, usa **fallback template** clínico. Notificação: `data/processed/alerts/alerta_JS001.md`."""
     ),
     code(
         """from pathlib import Path
@@ -259,7 +275,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.fusion.risk_fusion import build_js_scenario_scores
-from src.llm.ollama_report import generate_report
+from src.llm.ollama_report import JS001_PROFILE, generate_report
 from src.alerts.notifier import notify
 from src.vitals.synthetic_vitals import load_or_create_synthetic
 from src.vitals.prescription_check import check_prescription
@@ -278,6 +294,7 @@ context = {
     "prescription": {k: rx[k] for k in ("achados", "violations", "score", "targets")},
     "speech": speech,
     "transcript_text": txt,
+    "patient_profile": JS001_PROFILE,
 }
 report = generate_report(scenario["fusion"], context=context)
 path = notify(report, scenario["fusion"]["level"], payload={"fusion": scenario["fusion"]}, patient_id="JS001")

@@ -81,7 +81,7 @@ def main() -> None:
     from src.audio.speech_analysis import analyze_speech, speech_risk_from_text
     from src.alerts.notifier import notify
     from src.fusion.risk_fusion import build_js_scenario_scores
-    from src.llm.ollama_report import generate_report
+    from src.llm.ollama_report import JS001_PROFILE, generate_report
     from src.vitals.ecg_anomaly import run_ecg_if_pipeline
     from src.vitals.prescription_check import DEFAULT_JS001_PRESCRIPTION, check_prescription
     from src.vitals.synthetic_vitals import load_or_create_synthetic
@@ -141,6 +141,7 @@ def main() -> None:
         "prescription": {k: rx[k] for k in ("achados", "violations", "score", "targets")},
         "speech": {k: speech[k] for k in ("score", "hits", "critical_terms", "n_hits") if k in speech},
         "transcript_text": tr.get("text") or ref_text,
+        "patient_profile": JS001_PROFILE,
     }
     report = generate_report(fusion, context=context)
     alert_path = notify(

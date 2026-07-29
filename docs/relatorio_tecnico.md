@@ -25,7 +25,7 @@ Vitais → Isolation Forest/PyOD ─┘
 | Vídeo | `src/video` | MediaPipe Pose (assimetria L/R); YOLOv8 opcional |
 | Áudio | `src/audio` | Parkinson + RF; Whisper STT + termos críticos |
 | Vitais / texto | `src/vitals` | IF sintético + IF-ECG; `prescription_check` |
-| Fusão | `src/fusion` | `fuse_risk_scores` / cenário J.S. (E4) |
+| Fusão | `src/fusion` | `fuse_risk_scores` / cenário J.S. (E4); pesos clínicos 0.25/0.20/0.55 |
 | LLM / alertas | `src/llm`, `src/alerts` | Ollama SBAR clínico + notifier Markdown |
 
 ## 3. Equivalência Azure → stack local
