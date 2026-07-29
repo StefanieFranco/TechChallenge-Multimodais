@@ -18,6 +18,10 @@ Analisar e fusionar três modalidades de um paciente fictício em reabilitação
 
 Os scores são combinados na **fusão de risco** (pesos clínicos 0.25 / 0.20 / 0.55) e um **alerta SBAR** é gerado via Ollama (ou template fallback) para a equipe.
 
+## Equipe
+* Marcelo Mendonça Lira - RM369892
+* Stefanie Barcelos de Franco - RM369893
+
 **Casos demonstrados**
 
 - **JS-001 (J.S.)** — pós-AVC, risco **alto** (~0.75)
@@ -136,7 +140,7 @@ ollama pull llama3.2
 
 Sem Ollama, o código gera um **fallback clínico** em Markdown (ainda educacional).
 
-### 5. (Opcional) Hugging Face LoRA
+### 5. Hugging Face LoRA
 
 ```powershell
 hf auth login
