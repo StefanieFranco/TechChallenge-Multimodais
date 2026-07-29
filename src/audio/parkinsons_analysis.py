@@ -19,7 +19,7 @@ RISK_FEATURES_HIGHER_BETTER = ("HNR",)
 
 AVISO = (
     "Proxy educacional com features vocais UCI Parkinson (Oxford). "
-    "Nao e WAV/Whisper nem diagnostico clinico; Whisper fica para clips .wav futuros."
+    "Nao e diagnostico clinico. Whisper/STT cobre clips .wav do check-in (ver §4.10)."
 )
 
 

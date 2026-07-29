@@ -23,10 +23,10 @@ Vitais → Isolation Forest/PyOD ─┘
 | Camada | Pacote | Modelos |
 |---|---|---|
 | Vídeo | `src/video` | MediaPipe Pose (assimetria L/R); YOLOv8 opcional |
-| Áudio | `src/audio` | Features UCI Parkinson; Whisper (próximo) |
-| Vitais / texto | `src/vitals` | Isolation Forest v1 (sintético); prescrição planejada |
-| Fusão | `src/fusion` | Score ponderado dos 3 riscos |
-| LLM / alertas | `src/llm`, `src/alerts` | Ollama + adapter médico |
+| Áudio | `src/audio` | Parkinson + RF; Whisper STT + termos críticos |
+| Vitais / texto | `src/vitals` | IF sintético + IF-ECG; `prescription_check` |
+| Fusão | `src/fusion` | `fuse_risk_scores` / cenário J.S. (E4) |
+| LLM / alertas | `src/llm`, `src/alerts` | Ollama SBAR clínico + notifier Markdown |
 
 ## 3. Equivalência Azure → stack local
 
@@ -88,10 +88,12 @@ Tempo real no MVP: simulado por janelas deslizantes.
 
 ## 7. Resultados
 
-_Preencher após experimentos (ver checklist em `notebooks/Relatorio.ipynb`)._
+Ver tabela completa em `notebooks/Relatorio.ipynb` §10 (preenchida pelo pipeline E1–E5):
+fusão multimodal, métricas RF Parkinson, IF-ECG, Whisper/termos críticos e alerta SBAR em
+`data/processed/alerts/alerta_JS001.md`.
 
 ## 8. Limitações e próximos passos
 
-- Vídeo e parte dos áudios são simulados/próprios por limitação de datasets clínicos públicos.
+- Vídeo e parte dos áudios são simulados/próprios; UCI Parkinson é proxy tabular.
 - Azure substituído por equivalentes locais (justificar no vídeo de entrega).
-- Próximos notebooks: vitais sintéticos, áudio, pose, fusão/alertas.
+- Extensões: YOLOv8; carregar LoRA médico HF; publicar vídeo demo (`docs/roteiro_video_demo.md`).
