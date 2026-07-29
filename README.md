@@ -22,12 +22,64 @@ Os scores são combinados na **fusão de risco** (pesos clínicos 0.25 / 0.20 / 
 * Marcelo Mendonça Lira - RM369892
 * Stefanie Barcelos de Franco - RM369893
 
-**Casos demonstrados**
+## Instalação passo a passo (Windows)
 
-- **JS-001 (J.S.)** — pós-AVC, risco **alto** (~0.75)
-- **MR-001 (M.R.)** — fisioterapia preventiva, risco **baixo** (~0.15)
+### 1. Clone e ambiente
 
-Relatório completo: [`notebooks/Relatorio.ipynb`](notebooks/Relatorio.ipynb) · espelho: [`docs/relatorio_tecnico.md`](docs/relatorio_tecnico.md)
+```powershell
+git clone <url-do-repositorio>
+cd TechChallenge-Multimodais
+
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Se a política de scripts bloquear o activate:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### 2. (Opcional) Kernel Jupyter
+
+```powershell
+python -m ipykernel install --user --name=techchallenge-multimodais --display-name="Python (.venv TechChallenge)"
+```
+
+### 3. Datasets
+
+1. Baixe os ZIPs PhysioNet e o UCI Parkinson (tabela acima).
+2. Copie os ZIPs para `data/raw/vitals/` e o `parkinsons.data` para `data/raw/parkinsons/`.
+3. Abra [`notebooks/Relatorio.ipynb`](notebooks/Relatorio.ipynb) e rode §4.2 (extração) + seções seguintes, **ou** execute os scripts da pasta `scripts/`.
+
+Os vídeos em `data/raw/videos/` já devem estar presentes após o `git clone`.
+
+### 4. Ollama (alertas LLM)
+
+Instale o [Ollama](https://ollama.com/) e puxe o modelo:
+
+```powershell
+ollama pull llama3.2
+```
+
+Sem Ollama, o código gera um **fallback clínico** em Markdown (ainda educacional).
+
+### 5. Hugging Face LoRA
+
+```powershell
+hf auth login
+python -m src.fine_tuning.download_local_llama
+```
+
+### 6. Rodar a demo de fusão / alertas
+
+```powershell
+python scripts/run_fusion_pipeline_into_relatorio.py
+python scripts/add_low_risk_case_relatorio.py
+```
+
+Artefatos: `data/processed/alerts/alerta_JS001.md`, `alerta_MR001.md`.
 
 ## Arquitetura multimodal
 
@@ -97,66 +149,14 @@ MEDICAL_ADAPTER_PATH=./models/llama3-8b-bnb-4bit-medical/adapter
 
 > O download da base 8B é **grande** e gated. Para a demo rápida, use só `ollama pull llama3.2`.
 
-## Instalação passo a passo (Windows)
-
-### 1. Clone e ambiente
-
-```powershell
-git clone <url-do-repositorio>
-cd TechChallenge-Multimodais
-
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-Se a política de scripts bloquear o activate:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### 2. (Opcional) Kernel Jupyter
-
-```powershell
-python -m ipykernel install --user --name=techchallenge-multimodais --display-name="Python (.venv TechChallenge)"
-```
-
-### 3. Datasets
-
-1. Baixe os ZIPs PhysioNet e o UCI Parkinson (tabela acima).
-2. Copie os ZIPs para `data/raw/vitals/` e o `parkinsons.data` para `data/raw/parkinsons/`.
-3. Abra [`notebooks/Relatorio.ipynb`](notebooks/Relatorio.ipynb) e rode §4.2 (extração) + seções seguintes, **ou** execute os scripts da pasta `scripts/`.
-
-Os vídeos em `data/raw/videos/` já devem estar presentes após o `git clone`.
-
-### 4. Ollama (alertas LLM)
-
-Instale o [Ollama](https://ollama.com/) e puxe o modelo:
-
-```powershell
-ollama pull llama3.2
-```
-
-Sem Ollama, o código gera um **fallback clínico** em Markdown (ainda educacional).
-
-### 5. Hugging Face LoRA
-
-```powershell
-hf auth login
-python -m src.fine_tuning.download_local_llama
-```
-
-### 6. Rodar a demo de fusão / alertas
-
-```powershell
-python scripts/run_fusion_pipeline_into_relatorio.py
-python scripts/add_low_risk_case_relatorio.py
-```
-
-Artefatos: `data/processed/alerts/alerta_JS001.md`, `alerta_MR001.md`.
-
 ## 8. Resultados
+
+**Casos demonstrados**
+
+- **JS-001 (J.S.)** — pós-AVC, risco **alto** (~0.75)
+- **MR-001 (M.R.)** — fisioterapia preventiva, risco **baixo** (~0.15)
+
+Relatório completo: [`notebooks/Relatorio.ipynb`](notebooks/Relatorio.ipynb) · espelho: [`docs/relatorio_tecnico.md`](docs/relatorio_tecnico.md)
 
 Resumo espelhado do Relatorio (§8):
 
@@ -197,8 +197,3 @@ techchallenge-multimodais/
 ├── scripts/              # pipelines → Relatorio
 └── notebooks/Relatorio.ipynb
 ```
-
-## Entregáveis da Fase 4
-
-- Repositório com código + relatório (fluxo, modelos, resultados)
-- Vídeo ≤ 15 min (YouTube/Vimeo) — roteiro em [`docs/roteiro_video_demo.md`](docs/roteiro_video_demo.md)
